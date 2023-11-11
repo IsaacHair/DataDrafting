@@ -97,9 +97,10 @@ int histogram(int block_size, int bus_width, FILE* fp) { //Assuming at most 256 
 		//Also sets histmax.
 		;
 
-	incrementsize = (block_size*8)/histwidth;
-	if ((block_size*8)%histwidth)
+	incrementsize = (bus_width*8)/histwidth;
+	if ((bus_width*8)%histwidth)
 		incrementsize++;
+	//printf("increment:%d\n", incrementsize);
 
 	for (i = 0; i < size/block_size; i++)
 		for (j = 0; j < block_size/bus_width; j++) {
@@ -115,12 +116,11 @@ int histogram(int block_size, int bus_width, FILE* fp) { //Assuming at most 256 
 						numones = 0;
 					}
 				}
-			//printf("final idx:%d, final numones:%d\n", idx, numones);
 			if (idx > 0)
 				if (numones > idx/2)
 					hist++;
-			histograms[i][j] = hist;
 			//printf("hist:%d\n", hist);
+			histograms[i][j] = hist;
 		}
 					
 	for (flips = 0, i = 0, previous = values[0][0]; i < size/block_size; i++) { //Actually ok to just set previous to the first bus width's worth
@@ -132,6 +132,7 @@ int histogram(int block_size, int bus_width, FILE* fp) { //Assuming at most 256 
 					flips += hammingDistance(previous, values[i][j], bus_width+1);
 					//printf("Have j=%d: betweeen %c%c%c%c and %c%c%c%c\n", j, previous[0], previous[1], previous[2], previous[3], values[i][j][0], values[i][j][1], values[i][j][2], values[i][j][3]);
 					previous = values[i][j];
+					//printf("issued:(%d,%d) with hist:%d\n", i, j, hist);
 				}
 			}
 	}
