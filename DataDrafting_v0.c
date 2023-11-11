@@ -75,6 +75,73 @@ int greedy(int block_size, int bus_width, FILE* fp) { //Assuming at most 256 bus
 	return flips;
 }
 
+int histogram(int block_size, int bus_width, FILE* fp) { //Assuming at most 256 bus widths per block
+	int i, j, k, bit, idx, hist, histwidth, size, incrementsize, numones, histmax;
+	for (size = 0; fgetc(fp) != EOF; size++)
+		;
+	char values[size/block_size][block_size/bus_width][bus_width + 1]; //need extra to transmit the ordering information
+	int histograms[size/block_size][block_size/bus_width];
+	int used[block_size/bus_width];
+	char* previous;
+	int flips, min, mink;
+	rewind(fp);
+
+	for (i = 0; i < size/block_size; i++)
+		for (j = 0; j < block_size/bus_width; j++) {
+			for (k = 0; k < bus_width; k++)
+				values[i][j][k] = fgetc(fp);
+			values[i][j][k] = j;
+		}
+
+	for (i = histwidth, histmax = 1; histmax < block_size/bus_width; histmax *= 2, histwidth++) //Calculates i = log_2(block_size/bus_width)
+		//Also sets histmax.
+		;
+
+	incrementsize = (block_size*8)/histwidth;
+	if ((block_size*8)%histwidth)
+		incrementsize++;
+
+	for (i = 0; i < size/block_size; i++)
+		for (j = 0; j < block_size/bus_width; j++) {
+			for (k = 0, numones = 0, hist = 0, idx = 0; k < bus_width+1; k++)
+				for (bit = 1; bit < 256; bit *= 2, idx++) {
+					if ((values[i][j][k]/bit)%2)
+						numones++;
+					if (idx == incrementsize-1) {
+						idx = -1;
+						hist *= 2;
+						if (numones > incrementsize/2)
+							hist++;
+						numones = 0;
+					}
+				}
+			//printf("final idx:%d, final numones:%d\n", idx, numones);
+			if (idx > 0)
+				if (numones > idx/2)
+					hist++;
+			histograms[i][j] = hist;
+			//printf("hist:%d\n", hist);
+		}
+					
+	for (flips = 0, i = 0, previous = values[0][0]; i < size/block_size; i++) { //Actually ok to just set previous to the first bus width's worth
+		//This isn't fully optimized; we should go up, then down, then up, etc.
+		//We should also start on a bus_width's worth that has a histogram of 0, not an arbitrary one.
+		for (hist = 0; hist < histmax; hist++)
+			for (j = 0; j < block_size/bus_width; j++) {
+				if (histograms[i][j] == hist) {
+					flips += hammingDistance(previous, values[i][j], bus_width+1);
+					//printf("Have j=%d: betweeen %c%c%c%c and %c%c%c%c\n", j, previous[0], previous[1], previous[2], previous[3], values[i][j][0], values[i][j][1], values[i][j][2], values[i][j][3]);
+					previous = values[i][j];
+				}
+			}
+	}
+
+	rewind(fp);
+
+	return flips;
+}
+	
+
 int main(int argc, char **argv) {
 	if (argc != 3) {
 		printf("Usage: ./DataDrafting <cache block size in bytes> <transmission bus width in bytes>\n");
@@ -104,6 +171,7 @@ int main(int argc, char **argv) {
 		printf("\nTesting %s\n", name[i]);
 		printf("\t# of bitflips with in-order procedure: %d\n", inOrderFlips(block_size, bus_width, fp[i]));
 		printf("\t# of bitflips with greedy procedure: %d\n", greedy(block_size, bus_width, fp[i]));
+		printf("\t# of bitflips with histogram procedure: %d\n", histogram(block_size, bus_width, fp[i]));
 	}
 	printf("\n");
 
