@@ -59,57 +59,30 @@ int main(int argc, char **argv) {
 	//We now populate the hash table by reading the target file
 	//We read out the blocks as we go
 	while (getline(&word, &len, buffer) != -1)
-		if (word[0] == 'W')
+		if (word[0] == 'W') {
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			addr = strtoull(word, NULL, 0);
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			data = strtoull(word+3, NULL, 16);
 			if (word[5] == '1') {
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				addr = strtoull(word, NULL, 0);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				data = strtoull(word+3, NULL, 16);
 				hash_table[(addr/block_size)%hash_size][addr%block_size] = data%(1ULL<<8);
 			}
 			else if (word[5] == '2') {
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				addr = strtoull(word, NULL, 0);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				data = strtoull(word+3, NULL, 16);
 				hash_table[(addr/block_size)%hash_size][addr%block_size] = data%(1ULL<<8);
 				hash_table[((addr+1)/block_size)%hash_size][(addr+1)%block_size] = (data%(1ULL<<16))/(1ULL<<8);
 			}
 			else if (word[5] == '4') {
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				addr = strtoull(word, NULL, 16);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				data = strtoull(word+3, NULL, 16);
 				hash_table[(addr/block_size)%hash_size][addr%block_size] = data%(1ULL<<8);
 				hash_table[((addr+1)/block_size)%hash_size][(addr+1)%block_size] = (data%(1ULL<<16))/(1ULL<<8);
 				hash_table[((addr+2)/block_size)%hash_size][(addr+2)%block_size] = (data%(1ULL<<24))/(1ULL<<16);
 				hash_table[((addr+3)/block_size)%hash_size][(addr+3)%block_size] = (data%(1ULL<<32))/(1ULL<<24);
 			}
 			else {
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				addr = strtoull(word, NULL, 0);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				getline(&word, &len, buffer);
-				data = strtoull(word+3, NULL, 16);
 				hash_table[(addr/block_size)%hash_size][addr%block_size] = data%(1ULL<<8);
 				addr++;
 				hash_table[(addr/block_size)%hash_size][addr%block_size] = (data%(1ULL<<16))/(1ULL<<8);
@@ -126,13 +99,42 @@ int main(int argc, char **argv) {
 				addr++;
 				hash_table[(addr/block_size)%hash_size][addr%block_size] = data/(1ULL<<56);
 			}
+		}
 		else if (word[0] == 'R') {
 			//Treat all reads as if they were cache misses, and we load the entire associated block
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			addr = strtoull(word, NULL, 0);
-			for (i = 0; i < block_size; i++)
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			getline(&word, &len, buffer);
+			data = strtoull(word+3, NULL, 16);
+			for (i = 0; i < block_size-(addr%block_size); i++)
+				fprintf(target, "%c", hash_table[(addr/block_size)%hash_size][i]);
+			if (word[4] == '1') {
+				fprintf(target, "%c", data%(1ULL<<8));
+				i++;
+			}
+			else if (word[4] == '2') {
+				fprintf(target, "%c%c", data%(1ULL<<8), (data%(1ULL<<16))/(1ULL<<8));
+				i += 2;
+			}
+			else if (word[4] == '4') {
+				fprintf(target, "%c%c", data%(1ULL<<8), (data%(1ULL<<16))/(1ULL<<8));
+				fprintf(target, "%c%c", (data%(1ULL<<24))/(1ULL<<16), (data%(1ULL<<32))/(1ULL<<24));
+				i += 4;
+			}
+			else {
+				fprintf(target, "%c%c", data%(1ULL<<8), (data%(1ULL<<16))/(1ULL<<8));
+				fprintf(target, "%c%c", (data%(1ULL<<24))/(1ULL<<16), (data%(1ULL<<32))/(1ULL<<24));
+				fprintf(target, "%c%c", (data%(1ULL<<40))/(1ULL<<32), (data%(1ULL<<48))/(1ULL<<40));
+				fprintf(target, "%c%c", (data%(1ULL<<56))/(1ULL<<48), data/(1ULL<<56));
+				i += 8;
+			}
+			for (; i < block_size; i++)
 				fprintf(target, "%c", hash_table[(addr/block_size)%hash_size][i]);
 		}
 
