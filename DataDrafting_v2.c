@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
 	int block_size; //Number of bytes per cache block
 	int bus_width; //Width of bus in number of bytes
 	FILE* fp[5];
-	char* name[5] = {"Text", "Text With Zeros", "Random", "Random With Zeros", "Real Trace"};
+	char* name[5] = {"Text", "Text With Zeros", "Random", "Random With Zeros", "gcc Trace"};
 	int i;
 
 	block_size = atoi(argv[1]);
@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
 	fp[1] = fopen("SampleTextWithZeros.txt", "r");
 	fp[2] = fopen("RandomBits", "r");
 	fp[3] = fopen("RandomBitsWithZeros", "r");
-	fp[4] = fopen("RealTrace", "r");
+	fp[4] = fopen("TruncatedRealTrace", "r");
 	
 	for (i = 0; i < 5; i++) {
 		printf("\nTesting %s\n", name[i]);

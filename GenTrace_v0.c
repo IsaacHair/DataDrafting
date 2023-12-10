@@ -35,8 +35,10 @@ int main(int argc, char **argv) {
 	source = fopen(argv[1], "r");
 	buffer = fopen(argv[2], "w+");
 	target = fopen(argv[3], "w");
-	block_size = atoi(argv[4]);
-	hash_size = prime_greater(atoi(argv[5]));
+	hash_size = prime_greater(atoi(argv[4]));
+	block_size = atoi(argv[5]);
+
+	printf("hash_size:%d\nblock_size:%d\n", hash_size, block_size);
 
 	//We will purposefully leave the hash table unitialized to simulate what unitialized memory looks like
 	char hash_table[hash_size][block_size];
@@ -63,12 +65,15 @@ int main(int argc, char **argv) {
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			addr = strtoull(word, NULL, 0);
+			//printf("write addr:%d,%d\n", (addr/block_size)%hash_size, addr%block_size);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			data = strtoull(word+3, NULL, 16);
+			if (!(rand()%1000))
+				printf("write addr:%d data:%d\n", addr, data);
 			if (word[5] == '1') {
 				hash_table[(addr/block_size)%hash_size][addr%block_size] = data%(1ULL<<8);
 			}
@@ -101,19 +106,23 @@ int main(int argc, char **argv) {
 			}
 		}
 		else if (word[0] == 'R') {
+			//printf("read\n");
 			//Treat all reads as if they were cache misses, and we load the entire associated block
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			addr = strtoull(word, NULL, 0);
+			//printf("read addr:%d\n", addr);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			getline(&word, &len, buffer);
 			data = strtoull(word+3, NULL, 16);
-			for (i = 0; i < block_size-(addr%block_size); i++)
+			for (i = 0; i < block_size-(addr%block_size); i++) {
 				fprintf(target, "%c", hash_table[(addr/block_size)%hash_size][i]);
+				//printf("putting %d found at address %d,%d\n", hash_table[(addr/block_size)%hash_size][i], ((addr/block_size)%hash_size),i);
+			}
 			if (word[4] == '1') {
 				fprintf(target, "%c", data%(1ULL<<8));
 				i++;
@@ -128,6 +137,10 @@ int main(int argc, char **argv) {
 				i += 4;
 			}
 			else {
+				if (!(rand()%1000)) {
+					printf("read addr:%d data:%d ", addr, data);
+					printf("data at hash:%d\n", hash_table[(addr/block_size)%hash_size][i]);
+				}
 				fprintf(target, "%c%c", data%(1ULL<<8), (data%(1ULL<<16))/(1ULL<<8));
 				fprintf(target, "%c%c", (data%(1ULL<<24))/(1ULL<<16), (data%(1ULL<<32))/(1ULL<<24));
 				fprintf(target, "%c%c", (data%(1ULL<<40))/(1ULL<<32), (data%(1ULL<<48))/(1ULL<<40));
