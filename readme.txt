@@ -1,3 +1,6 @@
+For best results, use latest version of everything.
+
+
 DataDrafting_v0: allows for arbitrary input files that contain continuous binary data
 
 DataDrafting_v1: same as v0 but deleted histograms and added simple compression algorithm
