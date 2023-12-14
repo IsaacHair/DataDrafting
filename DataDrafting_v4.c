@@ -5,22 +5,34 @@
 #define NOCOMP 0
 #define COMP 1
 
+
 //Using MACROSSS!!!!11!!!!!1!!!!!?????
-//Put a 1 for every byte that was omitted b/c it was all zeros
-//The way that we compress actually still leaves "gaps," but it makes the spacing more regular
 #define COMPRESSION_CODE \
-int shift; \
+{int shift, iters; \
+char temp[size/block_size][block_size]; \
 for (i = 0; i < size/block_size; i++) \
 	for (j = 0; j < block_size/bus_width; j++) { \
 		values[i][j][actual_width-1] = 0; \
-		for (shift = 0; shift < bus_width; shift++) \
-			if (values[i][j][shift] == 0) { \
-				for (k = shift; k < bus_width-1; k++) \
-					values[i][j][k] = values[i][j][k+1]; \
-				values[i][j][bus_width-1] = 0; \
-				values[i][j][actual_width-1] |= (1<<shift); \
-			} \
-	}
+		for (k = 0; k < bus_width; k++) \
+			temp[i][j*bus_width + k] = values[i][j][k]; \
+	} \
+for (i = 0; i < size/block_size; i++) \
+	for (shift = iters = 0; iters < block_size; iters++) \
+		if (temp[i][shift] == 0) { \
+			for (k = shift; k < block_size-1; k++) \
+				temp[i][k] = temp[i][k+1]; \
+			temp[i][block_size-1] = 0; \
+			values[i][k/bus_width][actual_width-1] |= (1<<(k%bus_width)); \
+		} \
+		else \
+			shift++; \
+for (i = 0; i < size/block_size; i++/*, printf("\n")*/) \
+	for (j = 0; j < block_size/bus_width; j++) { \
+		for (k = 0; k < bus_width; k++) \
+			values[i][j][k] = temp[i][j*bus_width + k]; \
+/*		printf("comp:%d %d %d %d %d %d %d %d\n", values[i][j][0], values[i][j][1], values[i][j][2], values[i][j][3], values[i][j][4], values[i][j][5], values[i][j][6], values[i][j][7]); */\
+	} \
+}
 
 int hammingDistance(char* x, char* y, int len) { //Must be same length
 	int i, distance;
@@ -144,8 +156,8 @@ int main(int argc, char **argv) {
 	
 	int block_size; //Number of bytes per cache block
 	int bus_width; //Width of bus in number of bytes
-	FILE* fp[5];
-	char* name[5] = {"Text", "Text With Zeros", "Random", "Random With Zeros", "Real Trace"};
+	FILE* fp[10];
+	char* name[10] = {"Text", "Text With Zeros", "Random", "Random With Zeros", "mkfs32", "mkfs128", "mkfs256", "firefox32", "firefox128", "firefox256"};
 	int i;
 
 	block_size = atoi(argv[1]);
@@ -155,14 +167,23 @@ int main(int argc, char **argv) {
 		printf("bus_width must divide block_size\n");
 		return 2;
 	}
+	if (block_size != 64) {
+		printf("Only 64 byte blocks allowed.\n");
+		return 3;
+	}
 
 	fp[0] = fopen("SampleText.txt", "r");
 	fp[1] = fopen("SampleTextWithZeros.txt", "r");
 	fp[2] = fopen("RandomBits", "r");
 	fp[3] = fopen("RandomBitsWithZeros", "r");
-	fp[4] = fopen("RealTrace", "r");
+	fp[4] = fopen("RealTrace_mkfs32", "r");
+	fp[5] = fopen("RealTrace_mkfs128", "r");
+	fp[6] = fopen("RealTrace_mkfs256", "r");
+	fp[7] = fopen("RealTrace_firefox32", "r");
+	fp[8] = fopen("RealTrace_firefox128", "r");
+	fp[9] = fopen("RealTrace_firefox256", "r");
 	
-	for (i = 0; i < 5; i++) {
+	for (i = 0; i < 10; i++) {
 		printf("\nTesting %s\n", name[i]);
 		printf("\t# of bitflips with control: %d\n", inOrderFlips(block_size, bus_width, fp[i], NOCOMP));
 		printf("\t# of bitflips with greedy: %d\n", greedy(block_size, bus_width, fp[i], NOCOMP));
@@ -171,11 +192,8 @@ int main(int argc, char **argv) {
 	}
 	printf("\n");
 
-	fclose(fp[0]);
-	fclose(fp[1]);
-	fclose(fp[2]);
-	fclose(fp[3]);
-	fclose(fp[4]);
+	for (i = 0; i < 10; i++)
+		fclose(fp[i]);
 	
 	return 0;
 }
